@@ -34,6 +34,7 @@ Once in the correct branch, please execute the following commadn to initialize t
 ```
 $ cd /PX4-Autopilot-fw/Tools/simulation/gazebo-classic
 $ git remote set-url origin https://github.com/arplaboratory/PX4-SITL_gazebo-classic.git
+$ git fetch
 $ git checkout feature/thermals_ros2
 ```
 or run the script:
@@ -45,7 +46,7 @@ $ ./git_setup.bash
 
 ## Building PX4 package
 ```
-$ bash ./PX4-Autopilot/Tools/setup/ubuntu.sh --no-nuttx
+$ bash ./PX4-Autopilot-fw/Tools/setup/ubuntu.sh --no-sim-tools --no-nuttx
 $ cd ${HOME}/px4/PX4-Autopilot-fw
 $ make px4_sitl
 ```
