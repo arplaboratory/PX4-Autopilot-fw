@@ -20,6 +20,51 @@ PX4 is highly portable, OS-independent and supports Linux, NuttX and MacOS out o
   * many more experimental types (Blimps, Boats, Submarines, High altitude balloons, etc)
 * Releases: [Downloads](https://github.com/PX4/PX4-Autopilot/releases)
 
+## After Cloning if used in ARPL Lab
+Please clone the repository with the following command:
+```
+$ git clone --recursive https://github.com/arplaboratory/PX4-Autopilot-fw.git
+```
+Once cloned:
+```
+$ cd PX4-Autopilot-fw
+$ git checkout v1.15.0/fixedwing
+```
+Once in the correct branch, please execute the following commadn to initialize the proper submodule for gazebo-sitl-classic
+```
+$ cd /PX4-Autopilot-fw/Tools/simulation/gazebo-classic
+$ git remote set-url origin https://github.com/arplaboratory/PX4-SITL_gazebo-classic.git
+$ git checkout feature/thermals_ros2
+```
+or run the script:
+```
+$ cd /PX4-Autopilot-fw
+$ chmod +x git_setup.bash
+$ ./git_setup.bash
+```
+
+## Building PX4 package
+```
+$ bash ./PX4-Autopilot/Tools/setup/ubuntu.sh --no-nuttx
+$ cd ${HOME}/px4/PX4-Autopilot-fw
+$ make px4_sitl
+```
+
+## After the installation
+
+After the installation, to easy ryn other istances of PX4 and gazebo, it is advisable to add the following command to the bashrc:
+```
+make_plane() {
+   export PX4_SITL_WORLD=windy
+   export world=windy
+   PX4_UXRCE_DDS_NS="$1" make px4_sitl gazebo-classic_advanced_plane
+}
+```
+
+save and do:
+```
+$ source ~/.bashrc
+```
 
 ## Building a PX4 based drone, rover, boat or robot
 
