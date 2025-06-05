@@ -11,12 +11,12 @@ if [[ -n "$DONT_RUN" ]]; then
 	exit 0
 fi
 
-sitl_bin="$1"
-debugger="$2"
-model="$3"
-#world="$4"
-src_path="$5"
-build_path="$6"
+sitl_bin="$1"  #/home/luca/PX4-Autopilot/build/px4_sitl_default/bin/px4
+debugger="$2"  #none
+model="$3" #plane
+world="$4" #none or windy
+src_path="$5" #/home/luca/PX4-Autopilot
+build_path="$6"  #/home/luca/PX4-Autopilot/build/px4_sitl_default
 
 echo SITL ARGS
 
@@ -69,8 +69,7 @@ pkill -x gazebo || true
 
 export PX4_SIM_MODEL=gazebo-classic_${model}
 export PX4_SIM_WORLD=${world}
-echo "QUI PX4_SITL_WORLD: $PX4_SITL_WORLD"
-echo "world: $world"
+
 SIM_PID=0
 
 if [ -x "$(command -v gazebo)" ]; then
@@ -128,7 +127,7 @@ if [ -x "$(command -v gazebo)" ]; then
 		echo "Using: ${modelpath}/${model}/${model}.sdf"
 	fi
 
-	while gz model --verbose --spawn-file="${modelpath}/${model}/${model_name}.sdf" --model-name=${model} -x 1.01 -y 0.98 -z 0.83 -Y 0.0 2>&1 | grep -q "An instance of Gazebo is not running."; do
+	while gz model --verbose --spawn-file="${modelpath}/${model}/${model_name}.sdf" --model-name=${model} -x 1.01 -y 0.98 -z 0.83 -Y 1.7 2>&1 | grep -q "An instance of Gazebo is not running."; do
 		echo "gzserver not ready yet, trying again!"
 		sleep 1
 	done
@@ -147,31 +146,4 @@ else
 	exit 1
 fi
 
-pushd "$rootfs" >/dev/null
 
-# Do not exit on failure now from here on because we want the complete cleanup
-set +e
-
-sitl_command="\"$sitl_bin\" $no_pxh \"$build_path\"/etc"
-
-echo SITL COMMAND: $sitl_command
-
-if [ "$debugger" == "lldb" ]; then
-	eval lldb -- $sitl_command
-elif [ "$debugger" == "gdb" ]; then
-	eval gdb --args $sitl_command
-elif [ "$debugger" == "valgrind" ]; then
-	eval valgrind --track-origins=yes --leak-check=full -v $sitl_command
-elif [ "$debugger" == "callgrind" ]; then
-	eval valgrind --tool=callgrind -v $sitl_command
-else
-	eval $sitl_command
-fi
-
-popd >/dev/null
-
-
-kill -9 $SIM_PID
-if [[ ! -n "$HEADLESS" ]]; then
-	kill -9 $GUI_PID
-fi
