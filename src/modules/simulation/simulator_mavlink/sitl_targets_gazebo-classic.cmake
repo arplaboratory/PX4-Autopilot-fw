@@ -104,6 +104,7 @@ if(gazebo_FOUND)
 		typhoon_h480
 		uuv_bluerov2_heavy
 		uuv_hippocampus
+                chilli_wo_pod
 	)
 
 	set(worlds
