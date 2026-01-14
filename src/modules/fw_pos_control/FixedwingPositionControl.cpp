@@ -2531,6 +2531,7 @@ FixedwingPositionControl::Run()
 
 		if (_control_mode.flag_control_offboard_enabled) {
 			trajectory_setpoint_s trajectory_setpoint;
+			global_trajectory_setpoint_s global_trajectory_setpoint;
 
 			if (_trajectory_setpoint_sub.update(&trajectory_setpoint)) {
 				bool valid_setpoint = false;
@@ -2571,6 +2572,53 @@ FixedwingPositionControl::Run()
 						Vector2f velocity_sp_2d(trajectory_setpoint.velocity[0], trajectory_setpoint.velocity[1]);
 						Vector2f normalized_velocity_sp_2d = velocity_sp_2d.normalized();
 						Vector2f acceleration_sp_2d(trajectory_setpoint.acceleration[0], trajectory_setpoint.acceleration[1]);
+						Vector2f acceleration_normal = acceleration_sp_2d - acceleration_sp_2d.dot(normalized_velocity_sp_2d) *
+									       normalized_velocity_sp_2d;
+						float direction = -normalized_velocity_sp_2d.cross(acceleration_normal.normalized());
+						_pos_sp_triplet.current.loiter_radius = direction * velocity_sp_2d.norm() * velocity_sp_2d.norm() /
+											acceleration_normal.norm();
+
+					} else {
+						_pos_sp_triplet.current.loiter_radius = NAN;
+					}
+				}
+
+				_position_setpoint_current_valid = valid_setpoint;
+
+			} else if (_global_trajectory_setpoint_sub.update(&global_trajectory_setpoint)) {
+				bool valid_setpoint = false;
+				_pos_sp_triplet = {}; // clear any existing
+				_pos_sp_triplet.timestamp = global_trajectory_setpoint.timestamp;
+				_pos_sp_triplet.current.timestamp = global_trajectory_setpoint.timestamp;
+				_pos_sp_triplet.current.cruising_speed = NAN; // ignored
+				_pos_sp_triplet.current.cruising_throttle = NAN; // ignored
+				_pos_sp_triplet.current.vx = NAN;
+				_pos_sp_triplet.current.vy = NAN;
+				_pos_sp_triplet.current.vz = NAN;
+				_pos_sp_triplet.current.lat = static_cast<double>(NAN);
+				_pos_sp_triplet.current.lon = static_cast<double>(NAN);
+				_pos_sp_triplet.current.alt = NAN;
+
+				if (PX4_ISFINITE(global_trajectory_setpoint.lat) && PX4_ISFINITE(global_trajectory_setpoint.lon)
+				    && PX4_ISFINITE(global_trajectory_setpoint.alt)) {
+					valid_setpoint = true;
+					_pos_sp_triplet.current.type = position_setpoint_s::SETPOINT_TYPE_POSITION;
+					_pos_sp_triplet.current.lat = global_trajectory_setpoint.lat;
+					_pos_sp_triplet.current.lon = global_trajectory_setpoint.lon;
+					_pos_sp_triplet.current.alt = global_trajectory_setpoint.alt;
+				}
+
+				if (Vector3f(global_trajectory_setpoint.velocity).isAllFinite()) {
+					valid_setpoint = true;
+					_pos_sp_triplet.current.type = position_setpoint_s::SETPOINT_TYPE_POSITION;
+					_pos_sp_triplet.current.vx = global_trajectory_setpoint.velocity[0];
+					_pos_sp_triplet.current.vy = global_trajectory_setpoint.velocity[1];
+					_pos_sp_triplet.current.vz = global_trajectory_setpoint.velocity[2];
+
+					if (Vector3f(global_trajectory_setpoint.acceleration).isAllFinite()) {
+						Vector2f velocity_sp_2d(global_trajectory_setpoint.velocity[0], global_trajectory_setpoint.velocity[1]);
+						Vector2f normalized_velocity_sp_2d = velocity_sp_2d.normalized();
+						Vector2f acceleration_sp_2d(global_trajectory_setpoint.acceleration[0], global_trajectory_setpoint.acceleration[1]);
 						Vector2f acceleration_normal = acceleration_sp_2d - acceleration_sp_2d.dot(normalized_velocity_sp_2d) *
 									       normalized_velocity_sp_2d;
 						float direction = -normalized_velocity_sp_2d.cross(acceleration_normal.normalized());
@@ -2783,11 +2831,11 @@ FixedwingPositionControl::Run()
 
 
 
-		// Publish estimate of level flight
+// Publish estimate of level flight
 		_flight_phase_estimation_pub.get().timestamp = hrt_absolute_time();
 		_flight_phase_estimation_pub.update();
 
-		// if there's any change in landing gear setpoint publish it
+// if there's any change in landing gear setpoint publish it
 		if (_new_landing_gear_position != old_landing_gear_position
 		    && _new_landing_gear_position != landing_gear_s::GEAR_KEEP) {
 
@@ -2797,7 +2845,7 @@ FixedwingPositionControl::Run()
 			_landing_gear_pub.publish(landing_gear);
 		}
 
-		// In Manual modes flaps and spoilers are directly controlled in the Attitude controller and not published here
+// In Manual modes flaps and spoilers are directly controlled in the Attitude controller and not published here
 		if (_control_mode.flag_control_auto_enabled
 		    && _vehicle_status.vehicle_type == vehicle_status_s::VEHICLE_TYPE_FIXED_WING) {
 			normalized_unsigned_setpoint_s flaps_setpoint;
